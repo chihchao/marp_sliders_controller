@@ -1,7 +1,11 @@
 # Marp Slide Controller
 
 
-在您的 Marp Markdown 檔案中，貼入以下 HTML 標籤：
+
+## 事前準備
+
+1. 先將 Marp Markdown 簡報轉成 html 檔案。
+2. 開啟 html 檔案，在檔案最後的 `</body></html>` 前，插入以下程式：
 
 ```
 <!-- 引入必要依賴 -->
@@ -16,8 +20,5 @@
 </script>
 <script src="https://chihchao.github.io/marp_sliders_controller/marp-remote.js"></script>
 ```
-### 注意事項：
-1. **GitHub Pages 快取**：如果你修改了 `marp-remote.js` 並推送到 GitHub，瀏覽器可能會有快取。測試時如果沒反應，可以試著強制重新整理（Ctrl+F5）。
-2. **依賴順序**：務必確保 `mqtt.min.js` 和 `qrcode.min.js` 在 `marp-remote.js` **之前**載入。
-3. **HTTPS**：GitHub Pages 預設使用 HTTPS，這與腳本中使用的 `wss://`（加密 WebSocket）完全相容。
+
 
