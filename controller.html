@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marp 遠端控制器 (MQTT)</title>
+    <!-- 引入外部資源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            overscroll-behavior: none;
+        }
+        .active-scale:active { transform: scale(0.95); transition: transform 0.1s; }
+        /* 自定義滾動條樣式 */
+        #notes-area::-webkit-scrollbar { width: 4px; }
+        #notes-area::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none">
+
+    <!-- 頂部狀態列 -->
+    <header class="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+        <div>
+            <h1 class="text-sm font-black tracking-tighter text-blue-500 uppercase">Marp Remote</h1>
+            <p id="room-id-tag" class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">正在連線...</p>
+        </div>
+        <div id="connection-indicator" class="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold border border-red-500/20 transition-colors duration-300">
+            <span class="relative flex h-2 w-2">
+                <span id="indicator-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span id="indicator-dot" class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+            <span id="indicator-text">離線</span>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 flex flex-col p-6 gap-6 overflow-hidden">
+        
+        <!-- 頁碼指示器 (圓形進度) -->
+        <div class="flex flex-col items-center justify-center pt-4">
+            <div class="relative w-40 h-40 flex items-center justify-center">
+                <svg class="absolute w-full h-full -rotate-90">
+                    <circle cx="80" cy="80" r="75" stroke="currentColor" stroke-width="6" fill="transparent" class="text-slate-900" />
+                    <circle id="progress-bar" cx="80" cy="80" r="75" stroke="currentColor" stroke-width="6" fill="transparent" 
+                        class="text-blue-600 transition-all duration-500 ease-out" 
+                        stroke-dasharray="471" stroke-dashoffset="471" stroke-linecap="round" />
+                </svg>
+                <div class="z-10 text-center">
+                    <span id="current-page" class="text-6xl font-black text-white">1</span>
+                    <div id="total-pages" class="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">頁次</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 講者備忘錄區塊 -->
+        <div class="flex-1 flex flex-col bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-800/50 flex items-center gap-2">
+                <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Speaker Notes</span>
+            </div>
+            <div id="notes-area" class="flex-1 p-5 overflow-y-auto text-lg leading-relaxed text-slate-300 italic scroll-smooth">
+                等待簡報資料同步中...
+            </div>
+        </div>
+
+        <!-- 主要控制按鈕 (Prev / Next) -->
+        <div class="grid grid-cols-2 gap-4 h-28">
+            <button onclick="publishCmd('prev')" class="active-scale bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center justify-center border border-slate-700 shadow-lg">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <button onclick="publishCmd('next')" class="active-scale bg-blue-600 hover:bg-blue-500 rounded-2xl flex items-center justify-center border border-blue-500 shadow-lg shadow-blue-900/20">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部輔助欄 -->
+    <footer class="p-4 grid grid-cols-2 gap-3 bg-slate-900 border-t border-slate-800">
+        <button onclick="publishCmd('restart')" class="active-scale py-3 rounded-xl bg-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            重新開始
+        </button>
+        <button onclick="requestJump()" class="active-scale py-3 rounded-xl bg-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            跳轉頁碼
+        </button>
+    </footer>
+
+    <script>
+        // 設定公用 MQTT Broker 網址
+        const BROKER = "wss://broker.hivemq.com:8884/mqtt";
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+
+        // UI 元素參考
+        const roomTag = document.getElementById('room-id-tag');
+        const statusIndicator = document.getElementById('connection-indicator');
+        const statusText = document.getElementById('indicator-text');
+        const statusDot = document.getElementById('indicator-dot');
+        const statusPing = document.getElementById('indicator-ping');
+        const curPageEl = document.getElementById('current-page');
+        const totalPageEl = document.getElementById('total-pages');
+        const notesArea = document.getElementById('notes-area');
+        const progressBar = document.getElementById('progress-bar');
+
+        if (!roomId) {
+            // 處理無 Room ID 的異常情況
+            document.body.innerHTML = `
+                <div class="h-screen flex flex-col items-center justify-center p-10 text-center">
+                    <div class="text-blue-500 mb-4">
+                        <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold mb-2">缺少房間 ID</h2>
+                    <p class="text-slate-500 text-sm">請透過簡報端生成的 QR Code 網址開啟此控制器。</p>
+                </div>
+            `;
+        } else {
+            roomTag.innerText = `ROOM: ${roomId}`;
+            
+            // 初始化 MQTT 連線
+            const client = mqtt.connect(BROKER);
+            const TOPIC_CMD = `marp/remote/${roomId}/cmd`;
+            const TOPIC_STATUS = `marp/remote/${roomId}/status`;
+
+            client.on('connect', () => {
+                // 更新連線 UI 狀態
+                statusIndicator.classList.replace('text-red-500', 'text-green-500');
+                statusIndicator.classList.replace('bg-red-500/10', 'bg-green-500/10');
+                statusIndicator.classList.replace('border-red-500/20', 'border-green-500/20');
+                statusDot.classList.replace('bg-red-500', 'bg-green-500');
+                statusPing.classList.replace('bg-red-400', 'bg-green-400');
+                statusText.innerText = '已連線';
+                
+                // 訂閱狀態更新頻道
+                client.subscribe(TOPIC_STATUS);
+                console.log("已連接至 Broker 並訂閱狀態頻道");
+            });
+
+            client.on('message', (topic, message) => {
+                if (topic === TOPIC_STATUS) {
+                    try {
+                        const data = JSON.parse(message.toString());
+                        
+                        // 更新目前頁碼
+                        curPageEl.innerText = data.currentPage;
+                        totalPageEl.innerText = `OF ${data.totalPages || '?'}`;
+                        
+                        // 更新講者備忘錄
+                        notesArea.innerHTML = data.notes || '<span class="text-slate-700 italic">此頁面無備忘錄資訊。</span>';
+                        notesArea.scrollTop = 0;
+
+                        // 更新圓形進度條 (471 為 2 * PI * r, 其中 r=75)
+                        if (data.totalPages > 0) {
+                            const progress = data.currentPage / data.totalPages;
+                            const offset = 471 - (progress * 471);
+                            progressBar.style.strokeDashoffset = offset;
+                        }
+                    } catch (e) {
+                        console.error("狀態訊息解析失敗", e);
+                    }
+                }
+            });
+
+            client.on('close', () => {
+                // 更新斷線 UI 狀態
+                statusText.innerText = '中斷連線';
+                statusIndicator.classList.replace('text-green-500', 'text-red-500');
+                statusDot.classList.replace('bg-green-500', 'bg-red-500');
+                statusPing.classList.replace('bg-green-400', 'bg-red-400');
+            });
+
+            // 輔助函式：發送控制指令
+            window.publishCmd = (action, value = null) => {
+                const payload = JSON.stringify({ action, value });
+                client.publish(TOPIC_CMD, payload);
+            };
+
+            // 處理頁碼跳轉
+            window.requestJump = () => {
+                const target = prompt("請輸入要跳轉的頁碼：");
+                if (target && !isNaN(target)) {
+                    publishCmd('jump', parseInt(target));
+                }
+            };
+        }
+    </script>
+</body>
+</html>
