@@ -11,7 +11,6 @@
 
 (function() {
     // === 配置解析 ===
-    // 優先讀取全域變數 window.MARP_REMOTE_CONTROLLER，若無則使用預設值
     const CONTROLLER_URL = window.MARP_REMOTE_CONTROLLER || "https://chihchao.github.io/marp_sliders_controller/controller.html"; 
     const BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
     
@@ -21,6 +20,14 @@
     const TOPIC_STATUS = `marp/remote/${roomId}/status`;
 
     const client = mqtt.connect(BROKER_URL);
+
+    // 取得目前頁碼與總頁數的輔助工具
+    const getPageInfo = () => {
+        const pageHash = window.location.hash.replace('#', '');
+        const current = parseInt(pageHash) || 1;
+        const total = document.querySelectorAll('section').length;
+        return { current, total };
+    };
 
     // 建立 QR Code 覆蓋層 UI
     const createOverlay = () => {
@@ -42,7 +49,6 @@
         `;
         document.body.appendChild(div);
 
-        // 生成 QR Code
         const fullUrl = `${CONTROLLER_URL}?room=${roomId}`;
         new QRCode(document.getElementById("marp-qrcode"), {
             text: fullUrl,
@@ -55,15 +61,13 @@
     };
 
     let overlay;
-    
-    // 確保 DOM 載入後再建立 UI
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => { overlay = createOverlay(); });
     } else {
         overlay = createOverlay();
     }
 
-    // 1. MQTT 指令監聽
+    // 1. MQTT 指令監聽與執行
     client.on('connect', () => {
         console.log("MQTT Connected. Room ID:", roomId);
         client.subscribe(TOPIC_CMD);
@@ -74,12 +78,18 @@
         if (topic === TOPIC_CMD) {
             try {
                 const data = JSON.parse(message.toString());
+                const info = getPageInfo();
+                
                 switch(data.action) {
                     case 'next':
-                        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+                        if (info.current < info.total) {
+                            window.location.hash = `#${info.current + 1}`;
+                        }
                         break;
                     case 'prev':
-                        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+                        if (info.current > 1) {
+                            window.location.hash = `#${info.current - 1}`;
+                        }
                         break;
                     case 'restart':
                         window.location.hash = "#1";
@@ -88,29 +98,36 @@
                         window.location.hash = `#${data.value}`;
                         break;
                 }
+                // 指令執行後立即同步狀態
+                setTimeout(syncStatus, 50); 
             } catch (e) { console.error("Command error:", e); }
         }
     });
 
-    // 2. 狀態同步
+    // 2. 狀態同步：從簡報端傳送資訊至手機端
     function syncStatus() {
         if (!client.connected) return;
 
-        const pageHash = window.location.hash.replace('#', '');
-        const currentPage = parseInt(pageHash) || 1;
-        const totalPages = document.querySelectorAll('section').length;
-
-        const activeSection = document.querySelector(`section#${currentPage}`) || document.querySelectorAll('section')[currentPage - 1];
+        const info = getPageInfo();
+        const activeSection = document.querySelector(`section#${info.current}`) || document.querySelectorAll('section')[info.current - 1];
+        
         let notes = "";
         if (activeSection) {
             const aside = activeSection.querySelector('aside');
             notes = aside ? aside.innerHTML : "";
         }
 
-        const status = JSON.stringify({ currentPage, totalPages, notes });
+        const status = JSON.stringify({ 
+            currentPage: info.current, 
+            totalPages: info.total, 
+            notes 
+        });
+        
+        // 使用 retain: true 確保手機端一連線就能拿到最新狀態
         client.publish(TOPIC_STATUS, status, { retain: true });
     }
 
+    // 監聽手動換頁事件
     window.addEventListener('hashchange', syncStatus);
 
     // 3. 熱鍵控制
