@@ -63,15 +63,19 @@
         // 1) 嘗試讀取 Marp 產生的 presenter notes
         const noteEl = document.querySelector(`.bespoke-marp-note[data-index="${slideIndex}"]`);
         if (noteEl) {
-            const rawText = (noteEl.textContent || '').trim();
-            const cleaned = rawText.replace(/^_speakerNotes:\s*/i, '').trim();
-            return cleaned.replace(/\n/g, '<br>');
+            // Marp 產生的 note 會包在 <p> 中，取出所有段落文本後組成 HTML
+            const paragraphs = Array.from(noteEl.querySelectorAll('p'));
+            const texts = paragraphs.length
+                ? paragraphs.map(p => (p.textContent || '').trim()).filter(Boolean)
+                : [(noteEl.textContent || '').trim()];
+            const merged = texts.join('<br>');
+            return merged;
         }
 
         // 2) 回退：讀取 section 註解
         const activeSection = info.sections[slideIndex];
         const commentNotes = activeSection ? getAllComments(activeSection) : '';
-        return commentNotes.replace(/^_speakerNotes:\s*/i, '').trim();
+        return commentNotes;
     };
 
     // 同步狀態到手機端
