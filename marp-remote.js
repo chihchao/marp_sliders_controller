@@ -1,5 +1,5 @@
 /**
- * Marp MQTT 遠端控制腳本 (穩定修復版)
+ * Marp MQTT 遠端控制腳本 (註解提取版)
  * * 使用方式：
  * 1. 在 Marp Markdown 中引入依賴：
  * <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -7,7 +7,7 @@
  * 2. 定義設定並引入此腳本：
  * <script>
  * window.MARP_REMOTE_CONTROLLER = "https://yourname.github.io/controller.html";
- * window.MARP_REMOTE_ROOM_ID = "DEMO2024"; // 指定固定 ID
+ * window.MARP_REMOTE_ROOM_ID = "DEMO2024"; 
  * </script>
  * <script src="https://yourname.github.io/marp-remote.js"></script>
  */
@@ -22,7 +22,6 @@
     const TOPIC_CMD = `marp/remote/${roomId}/cmd`;
     const TOPIC_STATUS = `marp/remote/${roomId}/status`;
 
-    // 建立連線 (加上隨機 clientId 避免與手機端衝突)
     const client = mqtt.connect(BROKER_URL, {
         clientId: 'marp_presenter_' + Math.random().toString(16).slice(2, 8)
     });
@@ -66,7 +65,7 @@
     client.on('connect', () => {
         console.log("Presenter Connected. Room:", roomId);
         client.subscribe(TOPIC_CMD);
-        syncStatus(); // 連線成功立刻同步一次
+        syncStatus(); 
     });
 
     client.on('message', (topic, message) => {
@@ -89,22 +88,36 @@
                         if (data.value >= 1 && data.value <= info.total) window.location.hash = `#${data.value}`;
                         break;
                 }
-                setTimeout(syncStatus, 50); // 確保導航完成後同步
+                setTimeout(syncStatus, 100); 
             } catch (e) { console.error("Cmd error:", e); }
         }
     });
+
+    /**
+     * 從 HTML 註解中提取文字內容
+     */
+    function extractComments(element) {
+        let comments = [];
+        const iterator = document.createNodeIterator(element, NodeFilter.SHOW_COMMENT);
+        let currentNode;
+        while (currentNode = iterator.nextNode()) {
+            comments.push(currentNode.nodeValue.trim());
+        }
+        return comments.join('<br>');
+    }
 
     function syncStatus() {
         if (!client.connected) return;
         const info = getPageInfo();
         const activeSection = info.sections[info.current - 1];
+        
         let notes = "";
         if (activeSection) {
-            const aside = activeSection.querySelector('aside');
-            notes = aside ? aside.innerHTML : "";
+            // 修改處：從註解中提取筆記內容
+            notes = extractComments(activeSection);
         }
+
         const status = JSON.stringify({ currentPage: info.current, totalPages: info.total, notes });
-        // 使用 retain: true 讓手機端進入時能即時拿到最新頁碼
         client.publish(TOPIC_STATUS, status, { retain: true, qos: 1 });
     }
 
