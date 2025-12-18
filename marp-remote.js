@@ -50,15 +50,37 @@
         return comments.join('<br>');
     };
 
+    /**
+     * 取得目前頁面的講稿：
+     * 1) 優先讀取 Marp 產生的 presenter note (.bespoke-marp-note[data-index])
+     * 2) 回退至 section 內的註解
+     * 3) 自動清除前綴 "_speakerNotes:"，避免顯示設定鍵
+     */
+    const getSpeakerNotes = () => {
+        const info = getPageInfo();
+        const slideIndex = info.current - 1;
+
+        // 1) 嘗試讀取 Marp 產生的 presenter notes
+        const noteEl = document.querySelector(`.bespoke-marp-note[data-index="${slideIndex}"]`);
+        if (noteEl) {
+            const rawText = (noteEl.textContent || '').trim();
+            const cleaned = rawText.replace(/^_speakerNotes:\s*/i, '').trim();
+            return cleaned.replace(/\n/g, '<br>');
+        }
+
+        // 2) 回退：讀取 section 註解
+        const activeSection = info.sections[slideIndex];
+        const commentNotes = activeSection ? getAllComments(activeSection) : '';
+        return commentNotes.replace(/^_speakerNotes:\s*/i, '').trim();
+    };
+
     // 同步狀態到手機端
     const syncStatus = () => {
         if (!client.connected) return;
         
         const info = getPageInfo();
-        const activeSection = info.sections[info.current - 1];
-        
-        // 提取當前 section 內的所有註解內容
-        const notes = activeSection ? getAllComments(activeSection) : "";
+        // 提取講稿內容 (Marp presenter note > section 註解)
+        const notes = getSpeakerNotes();
         
         const statusPayload = JSON.stringify({ 
             currentPage: info.current, 
@@ -112,6 +134,7 @@
     // === 3. QR Code 介面建立（延遲建立：按下 K 才生成與顯示） ===
     window.addEventListener('load', () => {
         let overlay = null;
+        let overlayVisible = false;
 
         const ensureOverlay = () => {
             if (overlay) return overlay;
@@ -144,9 +167,14 @@
             return overlay;
         };
 
-        const toggleOverlay = () => {
+        const applyOverlayVisibility = (visible) => {
             const target = ensureOverlay();
-            target.style.display = (target.style.display === 'none') ? 'flex' : 'none';
+            target.style.display = visible ? 'flex' : 'none';
+            overlayVisible = visible;
+        };
+
+        const toggleOverlay = () => {
+            applyOverlayVisibility(!overlayVisible);
         };
 
         // 監聽 K 鍵開關介面
@@ -155,6 +183,10 @@
                 toggleOverlay();
             }
         });
+
+        // 確保初始狀態為隱藏 (若舊版留下的 overlay 仍存在)
+        const staleOverlay = document.getElementById('marp-qr-overlay');
+        if (staleOverlay) staleOverlay.style.display = 'none';
     });
 
 })();
