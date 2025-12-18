@@ -1,6 +1,11 @@
 # Marp Slide Controller
 
-用手機瀏覽器遠端控制 Marp 產出的 HTML 簡報，並同步講者備忘錄。
+用手機瀏覽器遠端控制 Marp 產出的 HTML 簡報，並同步顯示講者備忘錄。
+
+## Demo
+<https://chihchao.github.io/marp_sliders_controller/slide_template.html>
+- 開啟連結後，按 `K` 顯示 QRCode，用手機掃 QRCode 就會出現控制器。
+- 可 上一頁/下一頁/重新開始/跳轉頁面
 
 ## 快速開始
 
