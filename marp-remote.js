@@ -8,7 +8,7 @@
  * 2) 可選：自訂控制器與固定房間 ID
  *    window.MARP_REMOTE_CONTROLLER = "https://yourname.github.io/controller.html";
  *    window.MARP_REMOTE_ROOM_ID = "DEMOHELLOMARP2025";
- * 3) 載入本檔：<script src="https://chihchao.github.io/marp_sliders_controller/marp-remote.js"></script>
+ * 3) 載入本檔：<script src="https://chihchao.github.io/marp_slides_controller/marp-remote.js"></script>
  *
  * 簡報端會：
  * - 建立 MQTT 連線，持續送出頁碼與講稿到 `marp/remote/{roomId}/status`
@@ -18,7 +18,7 @@
 
 (function() {
     // === 1. 配置解析 ===
-    const CONTROLLER_URL = window.MARP_REMOTE_CONTROLLER || "https://chihchao.github.io/marp_sliders_controller/controller.html"; 
+    const CONTROLLER_URL = window.MARP_REMOTE_CONTROLLER || "https://chihchao.github.io/marp_slides_controller/controller.html"; 
     const BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
     const roomId = window.MARP_REMOTE_ROOM_ID || Math.random().toString(36).substring(2, 10).toUpperCase();
     

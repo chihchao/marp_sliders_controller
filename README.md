@@ -1,11 +1,11 @@
 [中文說明](#中文說明)
 
-# Marp Slide Controller
+# Marp Slides Controller
 
 Remote control your Marp-generated HTML slides using a mobile browser, with synchronized speaker notes.
 
 ## Demo
-<https://chihchao.github.io/marp_sliders_controller/slide_template.html>
+<https://chihchao.github.io/marp_slides_controller/slide_template.html>
 - Open the link, press `K` to show the QRCode, and scan it with your phone to access the controller.
 - Supports Previous / Next / Restart / Jump to page.
 
@@ -24,7 +24,7 @@ Remote control your Marp-generated HTML slides using a mobile browser, with sync
      // Static Room ID: Prevent changing rooms on reload
      // window.MARP_REMOTE_ROOM_ID = "DEMOHELLOMARP2025";
    </script>
-   <script src="https://chihchao.github.io/marp_sliders_controller/marp-remote.js"></script>
+   <script src="https://chihchao.github.io/marp_slides_controller/marp-remote.js"></script>
    ```
 3. Reload the slide, press `K` to pop up the QRCode. Scan it with your phone to open the controller.
 
@@ -60,12 +60,12 @@ Remote control your Marp-generated HTML slides using a mobile browser, with sync
 <a id="中文說明"></a>
 [English Version](#marp-slide-controller)
 
-# Marp Slide Controller
+# Marp Slides Controller
 
 用手機瀏覽器遠端控制 Marp 產出的 HTML 簡報，並同步顯示講者備忘錄。
 
 ## Demo
-<https://chihchao.github.io/marp_sliders_controller/slide_template.html>
+<https://chihchao.github.io/marp_slides_controller/slide_template.html>
 - 開啟連結後，按 `K` 顯示 QRCode，用手機掃 QRCode 就會出現控制器。
 - 可 上一頁/下一頁/重新開始/跳轉頁面
 
@@ -84,7 +84,7 @@ Remote control your Marp-generated HTML slides using a mobile browser, with sync
      // 固定房間 ID：避免每次重新載入都換房間
      // window.MARP_REMOTE_ROOM_ID = "DEMOHELLOMARP2025";
    </script>
-   <script src="https://chihchao.github.io/marp_sliders_controller/marp-remote.js"></script>
+   <script src="https://chihchao.github.io/marp_slides_controller/marp-remote.js"></script>
    ```
 3. 重新載入簡報，按鍵盤 `K` 會彈出 QRCode。用手機掃描即可打開控制器。
 
